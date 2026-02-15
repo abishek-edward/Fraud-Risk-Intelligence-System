@@ -27,13 +27,15 @@ app.add_middleware(
 # Load ML Model
 # ----------------------------
 
-model = joblib.load("fraud_model.pkl")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(BASE_DIR, "fraud_model.pkl")
+model = joblib.load(model_path)
 
 # ----------------------------
 # MongoDB Connection
 # ----------------------------
 
-MONGO_URI = "mongodb+srv://fraudadmin:StrongPassword123@cluster0.ssb7ubx.mongodb.net/?appName=Cluster0"
+MONGO_URI = os.getenv("MONGO_URI")
 
 client = MongoClient(MONGO_URI)
 db = client["fraud_db"]
