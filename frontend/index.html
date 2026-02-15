@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fraud Risk Intelligence Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-5">
+
+    <h2 class="mb-4 text-center">Fraud Risk Intelligence Dashboard</h2>
+
+    <!-- KPI CARDS -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-bg-primary shadow">
+                <div class="card-body">
+                    <h5>Total Transactions</h5>
+                    <h3 id="total">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-bg-success shadow">
+                <div class="card-body">
+                    <h5>Low Risk</h5>
+                    <h3 id="low">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-bg-warning shadow">
+                <div class="card-body">
+                    <h5>Medium Risk</h5>
+                    <h3 id="medium">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-bg-danger shadow">
+                <div class="card-body">
+                    <h5>High Risk</h5>
+                    <h3 id="high">0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPROVAL RATE -->
+    <div class="card mb-4 shadow">
+        <div class="card-body">
+            <h5>Approval Rate</h5>
+            <h3 id="approval">0%</h3>
+        </div>
+    </div>
+
+    <!-- CHART SECTION -->
+    <h4 class="mb-3">Analytics</h4>
+
+    <div class="row mb-5">
+        <div class="col-md-6">
+            <canvas id="riskChart"></canvas>
+        </div>
+        <div class="col-md-6">
+            <canvas id="decisionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- RECENT TRANSACTIONS -->
+    <h4>Recent Transactions</h4>
+
+    <table class="table table-bordered table-striped mt-3">
+        <thead class="table-dark">
+            <tr>
+                <th>Fraud Probability</th>
+                <th>Risk Level</th>
+                <th>Decision</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody id="transactionTable">
+        </tbody>
+    </table>
+
+</div>
+
+<script>
+
+let riskChart;
+let decisionChart;
+
+async function loadDashboard() {
+
+    const dashboardResponse = await fetch("https://fraud-risk-intelligence-system.onrender.com/dashboard");
+    const dashboardData = await dashboardResponse.json();
+
+    // KPI Updates
+    document.getElementById("total").innerText = dashboardData.total_transactions;
+    document.getElementById("low").innerText = dashboardData.risk_distribution.low;
+    document.getElementById("medium").innerText = dashboardData.risk_distribution.medium;
+    document.getElementById("high").innerText = dashboardData.risk_distribution.high;
+    document.getElementById("approval").innerText = dashboardData.approval_rate_percent + "%";
+
+    renderCharts(dashboardData);
+
+    // Transactions Table
+    const transactionsResponse = await fetch("https://fraud-risk-intelligence-system.onrender.com/transactions");
+    const transactions = await transactionsResponse.json();
+
+    const table = document.getElementById("transactionTable");
+    table.innerHTML = "";
+
+    transactions.reverse().forEach(tx => {
+
+        const row = `
+            <tr>
+                <td>${tx.fraud_probability}</td>
+                <td>${tx.risk_level}</td>
+                <td>${tx.decision}</td>
+                <td>${tx.timestamp ? new Date(tx.timestamp).toLocaleString() : ""}</td>
+            </tr>
+        `;
+
+        table.innerHTML += row;
+    });
+}
+
+function renderCharts(data) {
+
+    const riskData = [
+        data.risk_distribution.low,
+        data.risk_distribution.medium,
+        data.risk_distribution.high
+    ];
+
+    const decisionData = [
+        data.decision_distribution.approved,
+        data.decision_distribution.review,
+        data.decision_distribution.blocked
+    ];
+
+    if (riskChart) riskChart.destroy();
+    if (decisionChart) decisionChart.destroy();
+
+    const riskCtx = document.getElementById('riskChart').getContext('2d');
+    const decisionCtx = document.getElementById('decisionChart').getContext('2d');
+
+    riskChart = new Chart(riskCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Low', 'Medium', 'High'],
+            datasets: [{
+                data: riskData,
+                backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+            }]
+        }
+    });
+
+    decisionChart = new Chart(decisionCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Approved', 'Review', 'Blocked'],
+            datasets: [{
+                label: 'Decisions',
+                data: decisionData,
+                backgroundColor: '#0d6efd'
+            }]
+        }
+    });
+}
+
+loadDashboard();
+
+// Auto refresh every 5 seconds
+setInterval(() => {
+    loadDashboard();
+}, 5000);
+
+</script>
+
+</body>
+</html>
